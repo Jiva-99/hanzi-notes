@@ -1,9 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Hanzi Notes: each user can only read and write their own data.
+    // Hanzi Notes: only my Google account can read or write.
+    // Signing in with any other account shows "isn't allowed to use this app".
     match /hanzi/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email == "jittibest@gmail.com"
+        && request.auth.token.email_verified == true;
     }
   }
 }

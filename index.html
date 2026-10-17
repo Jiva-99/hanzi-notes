@@ -228,9 +228,24 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .hint{font-size:12px;color:var(--muted)}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1D1D1F;color:#fff;border-radius:10px;padding:10px 14px;font-size:13px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:50}
 #toast button{background:transparent;border:0;color:#8DB8FF;font-weight:600;cursor:pointer}
-.auth{height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg-soft);padding:24px}
-.auth .card{width:min(380px,100%);align-items:center;text-align:center;padding:36px 28px}
+.auth{flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg-soft);padding:24px;overflow-y:auto}
+.auth .card{width:min(400px,100%);align-items:center;text-align:center;padding:36px 28px}
 .auth .mark{width:64px;height:64px;border-radius:16px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:36px;font-family:var(--zh)}
+.auth .err{font-size:13px;color:var(--bad-fg);background:var(--bad-bg);border-radius:8px;padding:10px 12px;text-align:left;align-self:stretch}
+/* sync status */
+.sync{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;font-size:12px;color:var(--text-2);min-width:0}
+.sync .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--muted)}
+.sync.ok .dot{background:#2E9E5B}
+.sync.busy .dot{background:#E0A100;animation:pulse 1.2s ease-in-out infinite}
+.sync.out .dot,.sync.err .dot{background:#D93A2B}
+.sync .sync-txt{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.sync .sync-txt b{font-weight:600;color:var(--text)}
+.sync .sync-txt small{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sync.err .sync-txt small{white-space:normal}
+.sync .sync-btn{margin-left:auto;height:24px;padding:0 10px;font-size:12px}
+.sync-compact .sync{padding:0 4px;gap:6px}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.sync.busy .dot{animation:none}}
 
 /* ---- responsive ---- */
 @media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} .span3{grid-column:1/-1} .inspector{width:280px} .thead,.vrow{grid-template-columns:100px 130px minmax(0,1fr) 90px} .thead .opt,.vrow .opt{display:none} }
@@ -272,17 +287,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 </head>
 <body>
 
-<div id="auth" class="auth" hidden>
-  <div class="card">
-    <div class="mark">汉</div>
-    <h1 style="margin:8px 0 0;font-size:22px">Hanzi Notes</h1>
-    <p class="muted" style="margin:0">Your vocab, texts, grammar and exercises, synced across your devices.</p>
-    <button class="btn primary lg" id="signIn" style="margin-top:12px;width:100%">Sign in with Google</button>
-    <p class="hint" id="authMsg"></p>
-  </div>
-</div>
-
-<div id="app" class="app" hidden>
+<div id="app" class="app">
   <aside class="side" aria-label="Main">
     <div class="brand"><span class="mark" aria-hidden="true">汉</span>Hanzi Notes</div>
     <label class="search">
@@ -499,56 +504,110 @@ let fb = null; // { db, auth, fs: firestore module, au: auth module }
 let user = null;
 let unsubs = [];
 
+/* ---------- sync status ---------- */
+// auth: 'local' (no config) | 'loading' | 'out' | 'in'
+const sync = { auth: CLOUD ? 'loading' : 'local', pending: 0, error: '', online: navigator.onLine, signingIn: false, authMsg: '' };
+window.addEventListener('online', () => { sync.online = true; updateSync(); });
+window.addEventListener('offline', () => { sync.online = false; updateSync(); });
+async function track(p) {
+  sync.pending++; updateSync();
+  try { await p; sync.error = ''; }
+  catch (e) { sync.error = e.message || String(e); throw e; }
+  finally { sync.pending--; updateSync(); }
+}
+function syncState() {
+  if (sync.auth === 'local') return { k: 'local', label: 'Local only', detail: 'Saved in this browser only' };
+  if (sync.auth === 'loading') return { k: 'busy', label: 'Connecting…', detail: '' };
+  if (sync.auth === 'out') return { k: 'out', label: 'Signed out', detail: 'Sign in to load and save your notes' };
+  if (sync.error) return { k: 'err', label: 'Sync error', detail: sync.error };
+  if (!sync.online) return { k: 'busy', label: 'Offline', detail: sync.pending ? `${plural(sync.pending, 'change')} will sync when you’re back online` : 'Changes will sync when you’re back online' };
+  if (sync.pending) return { k: 'busy', label: 'Syncing…', detail: `Saving ${plural(sync.pending, 'change')}` };
+  return { k: 'ok', label: 'Synced', detail: user?.email || '' };
+}
+function syncHTML(compact = false) {
+  const s = syncState();
+  const btn = sync.auth === 'out'
+    ? `<button class="btn primary sync-btn" data-act="signIn" ${sync.signingIn ? 'disabled' : ''}>${sync.signingIn ? 'Signing in…' : 'Sign in'}</button>`
+    : sync.auth === 'in' && !compact ? `<button class="btn ghost sync-btn" data-act="signOut">Sign out</button>` : '';
+  return `<div class="sync ${s.k}" title="${esc(s.detail)}" role="status"><span class="dot" aria-hidden="true"></span><span class="sync-txt"><b>${s.label}</b>${s.detail && !compact ? `<small>${esc(s.detail)}</small>` : ''}</span>${btn}</div>`;
+}
+function updateSync() { document.querySelectorAll('[data-sync]').forEach(el => { el.innerHTML = syncHTML(el.dataset.sync === 'compact'); }); }
+
 const store = {
   get cloud() { return !!(fb && user); },
+  get canWrite() { return !CLOUD || this.cloud; },
   ref(coll, id) { return fb.fs.doc(fb.db, 'hanzi', user.uid, coll, id); },
+  guard() { if (!this.canWrite) { toast('Sign in to save your notes.'); return false; } return true; },
   async put(coll, obj) {
+    if (!this.guard()) return obj;
     const now = Date.now();
     obj = { ...obj, id: obj.id || newId(), updated: now, created: obj.created || now };
     const arr = S[coll]; const i = arr.findIndex(x => x.id === obj.id);
     if (i >= 0) arr[i] = obj; else arr.push(obj);
     scheduleRender();
-    try {
-      if (this.cloud) await fb.fs.setDoc(this.ref(coll, obj.id), obj);
-      else saveLocal();
-    } catch (e) { console.error(e); toast('Couldn’t save: ' + e.message); }
+    // Local state updates instantly; the cloud write syncs in the background (Firestore queues it offline).
+    if (this.cloud) track(fb.fs.setDoc(this.ref(coll, obj.id), obj)).catch(e => { console.error(e); toast('Couldn’t save: ' + e.message); });
+    else saveLocal();
     return obj;
   },
   async putMany(coll, list) {
+    if (!this.guard()) return [];
     const now = Date.now();
     const objs = list.map(o => ({ ...o, id: o.id || newId(), updated: now, created: o.created || now }));
     for (const o of objs) { const i = S[coll].findIndex(x => x.id === o.id); if (i >= 0) S[coll][i] = o; else S[coll].push(o); }
     scheduleRender();
-    try {
-      if (this.cloud) {
-        for (let i = 0; i < objs.length; i += 400) {
-          const b = fb.fs.writeBatch(fb.db);
-          objs.slice(i, i + 400).forEach(o => b.set(this.ref(coll, o.id), o));
-          await b.commit();
-        }
-      } else saveLocal();
-    } catch (e) { console.error(e); toast('Couldn’t save: ' + e.message); }
+    if (this.cloud) {
+      for (let i = 0; i < objs.length; i += 400) {
+        const b = fb.fs.writeBatch(fb.db);
+        objs.slice(i, i + 400).forEach(o => b.set(this.ref(coll, o.id), o));
+        track(b.commit()).catch(e => { console.error(e); toast('Couldn’t save: ' + e.message); });
+      }
+    } else saveLocal();
     return objs;
   },
   async remove(coll, id) {
+    if (!this.guard()) return;
     S[coll] = S[coll].filter(x => x.id !== id);
     scheduleRender();
-    try {
-      if (this.cloud) await fb.fs.deleteDoc(this.ref(coll, id));
-      else saveLocal();
-    } catch (e) { console.error(e); toast('Couldn’t delete: ' + e.message); }
+    if (this.cloud) track(fb.fs.deleteDoc(this.ref(coll, id))).catch(e => { console.error(e); toast('Couldn’t delete: ' + e.message); });
+    else saveLocal();
   },
   async setMeta(patch) {
+    if (!this.guard()) return;
     S.meta = { ...S.meta, ...patch };
     scheduleRender();
-    try {
-      if (this.cloud) await fb.fs.setDoc(fb.fs.doc(fb.db, 'hanzi', user.uid, 'meta', 'main'), S.meta);
-      else saveLocal();
-    } catch (e) { console.error(e); }
+    if (this.cloud) track(fb.fs.setDoc(fb.fs.doc(fb.db, 'hanzi', user.uid, 'meta', 'main'), S.meta)).catch(e => console.error(e));
+    else saveLocal();
   }
 };
 function saveLocal() { localStorage.setItem(LS_DATA, JSON.stringify(S)); }
 function loadLocal() { try { Object.assign(S, JSON.parse(localStorage.getItem(LS_DATA) || '{}')); } catch { } COLLS.forEach(c => S[c] = S[c] || []); S.meta = S.meta || {}; }
+function clearData() { COLLS.forEach(c => { S[c] = []; }); S.meta = {}; ui.rv = null; ui.pop = null; ui.vocab.sel = null; }
+
+const AUTH_MSG = {
+  'auth/unauthorized-domain': `This site isn’t on Firebase’s list yet. In Firebase → Authentication → Settings → Authorized domains, add ${location.hostname}.`,
+  'auth/popup-blocked': 'The sign-in window was blocked. Allow pop-ups for this site (on iPad: Settings → Safari → turn off Block Pop-ups), then try again.',
+  'auth/popup-closed-by-user': 'The sign-in window was closed before finishing. Try again.',
+  'auth/cancelled-popup-request': 'Sign-in was interrupted. Try again.',
+  'auth/operation-not-allowed': 'Google sign-in isn’t switched on. In Firebase → Authentication → Sign-in method, enable Google.',
+  'auth/network-request-failed': 'No connection to Google. Check your internet and try again.',
+  'auth/web-storage-unsupported': 'This browser is blocking storage the sign-in needs. Turn off Private Browsing, then try again.'
+};
+// Popup only (never redirect): the authDomain (*.firebaseapp.com) differs from the app's domain
+// (github.io). The redirect flow needs cross-site storage that Safari (iPad/iPhone) and newer
+// Chrome/Firefox block, so it silently comes back signed out. The popup flow doesn't need it.
+// Called straight from the click so Safari treats the popup as user-initiated.
+function signIn() {
+  if (!fb) { toast('Still connecting to Firebase…'); return; }
+  sync.signingIn = true; sync.authMsg = ''; updateSync(); render();
+  fb.au.signInWithPopup(fb.auth, new fb.au.GoogleAuthProvider())
+    .catch(e => { console.error('Sign-in failed', e); sync.authMsg = (AUTH_MSG[e.code] || e.message) + (e.code ? ` (${e.code})` : ''); })
+    .finally(() => { sync.signingIn = false; updateSync(); render(); });
+}
+async function signOutNow() {
+  if (sync.pending && !confirm(`${plural(sync.pending, 'change')} haven’t synced yet. Sign out anyway?`)) return;
+  await fb.au.signOut(fb.auth);
+}
 
 async function initCloud() {
   const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
@@ -559,27 +618,19 @@ async function initCloud() {
   catch { db = fs.getFirestore(app); }
   const auth = au.getAuth(app);
   fb = { db, auth, fs, au };
-  au.getRedirectResult(auth).catch(e => { $('#authMsg').textContent = e.message; });
   au.onAuthStateChanged(auth, u => {
     user = u;
     unsubs.forEach(f => f()); unsubs = [];
-    if (!u) { $('#app').hidden = true; $('#auth').hidden = false; return; }
-    $('#auth').hidden = true; $('#app').hidden = false;
-    COLLS.forEach(c => unsubs.push(fs.onSnapshot(fs.collection(db, 'hanzi', u.uid, c), snap => { S[c] = snap.docs.map(d => d.data()); scheduleRender(); }, e => toast('Sync error: ' + e.message))));
-    unsubs.push(fs.onSnapshot(fs.doc(db, 'hanzi', u.uid, 'meta', 'main'), d => { S.meta = d.data() || {}; scheduleRender(); }));
-    render();
-  });
-  $('#signIn').onclick = async () => {
-    const provider = new au.GoogleAuthProvider();
-    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    try {
-      if (standalone) await au.signInWithRedirect(auth, provider);
-      else await au.signInWithPopup(auth, provider);
-    } catch (e) {
-      if (/popup/.test(e.code || '')) await au.signInWithRedirect(auth, provider);
-      else $('#authMsg').textContent = e.message;
+    clearData();
+    sync.error = ''; sync.pending = 0;
+    sync.auth = u ? 'in' : 'out';
+    if (u) {
+      const onErr = e => { console.error(e); sync.error = e.code === 'permission-denied' ? `This account (${u.email}) isn’t allowed to use this app.` : e.message; updateSync(); };
+      COLLS.forEach(c => unsubs.push(fs.onSnapshot(fs.collection(db, 'hanzi', u.uid, c), snap => { S[c] = snap.docs.map(d => d.data()); if (!snap.metadata.fromCache) sync.error = ''; scheduleRender(); }, onErr)));
+      unsubs.push(fs.onSnapshot(fs.doc(db, 'hanzi', u.uid, 'meta', 'main'), d => { S.meta = d.data() || {}; scheduleRender(); }, onErr));
     }
-  };
+    updateSync(); render();
+  });
 }
 
 /* =====================================================================
@@ -634,15 +685,25 @@ function parseRoute() {
 }
 window.addEventListener('hashchange', () => { parseRoute(); ui.pop = null; render(); $('#view .scroll')?.scrollTo(0, 0); });
 
+function vSignIn() {
+  const loading = sync.auth === 'loading';
+  return bar('Hanzi Notes', '', `<span data-sync="compact" class="sync-compact show-m">${syncHTML(true)}</span>`) + `<div class="auth"><div class="card">
+    <div class="mark" aria-hidden="true">汉</div>
+    <h1 style="margin:8px 0 0;font-size:22px">Hanzi Notes</h1>
+    <p class="muted" style="margin:0">Sign in to load and save your vocab, texts, grammar and exercises. They sync across your laptop, iPhone and iPad.</p>
+    <button class="btn primary lg" data-act="signIn" style="margin-top:12px;width:100%" ${loading || sync.signingIn ? 'disabled' : ''}>${loading ? 'Connecting…' : sync.signingIn ? 'Signing in…' : 'Sign in with Google'}</button>
+    ${sync.authMsg ? `<div class="err" role="alert">${esc(sync.authMsg)}</div>` : '<p class="hint" style="margin:0">A Google window will open. Finish signing in there and it closes by itself.</p>'}
+  </div></div>`;
+}
+
 function render() {
-  if ($('#app').hidden) return;
   if (composing) { pendingRender = true; return; }
   const ae = document.activeElement;
   const keep = ae && ae.id && $('#view').contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   const scrollEls = [...document.querySelectorAll('#view [data-keep-scroll]')].map(el => [el.dataset.keepScroll, el.scrollTop]);
   renderNav();
   const V = { today: vToday, review: vReview, lessons: vLessons, lesson: vLesson, vocab: vVocab, texts: vTexts, grammar: vGrammar, exercises: vExercises, search: vSearch, settings: vSettings }[ui.route] || vToday;
-  $('#view').innerHTML = V();
+  $('#view').innerHTML = (CLOUD && sync.auth !== 'in') ? vSignIn() : V();
   scrollEls.forEach(([k, t]) => { const el = $(`#view [data-keep-scroll="${k}"]`); if (el) el.scrollTop = t; });
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.e); } catch { } } }
 }
@@ -663,6 +724,7 @@ function renderNav() {
     ${item('grammar', 'Grammar', `<span class="n">${S.grammar.length || ''}</span>`)}
     ${item('exercises', 'Exercises', `<span class="n">${S.exercises.length || ''}</span>`)}
     <div class="side-foot">
+      <div data-sync>${syncHTML()}</div>
       <div class="streak">${ic('flame')}${st ? `${st}-day streak` : 'Start a streak today'}</div>
       ${item('settings', 'Settings')}
     </div>`;
@@ -702,7 +764,7 @@ function vToday() {
   const mist = openMistakes().slice(0, 4);
   const greeting = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 
-  return bar('Today', `${greeting} · <span class="zh">今天</span>`, addBtn('newVocab')) + `
+  return bar('Today', `${greeting} · <span class="zh">今天</span>`, `<a href="#/settings" data-sync="compact" class="sync-compact show-m" style="text-decoration:none">${syncHTML(true)}</a>${addBtn('newVocab')}`) + `
   <div class="scroll" data-keep-scroll="today"><div class="grid">
     <section class="card span2" style="flex-direction:row;align-items:center;gap:32px;flex-wrap:wrap">
       <div style="flex:1;min-width:220px">
@@ -1096,11 +1158,11 @@ function vSettings() {
       <button class="btn" data-act="speak" data-text="你好，我在学中文。">${ic('play', 13)} Test voice</button>
     </section>
     <section class="card span2"><h2>Data</h2>
-      <div class="muted" style="font-size:13px">${store.cloud ? `Synced with Firebase as <b>${esc(user.email || user.displayName || '')}</b>.` : 'Local mode: data is saved in this browser only. Add your Firebase config to sync across devices.'}</div>
+      <div data-sync style="border:1px solid var(--line);border-radius:10px">${syncHTML()}</div>
+      <div class="muted" style="font-size:13px">${store.cloud ? `Signed in as <b>${esc(user.email || user.displayName || '')}</b>. Every change saves to Firebase and syncs to your other devices.` : 'Local mode: data is saved in this browser only. Add your Firebase config to sync across devices.'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" data-act="export">Export JSON backup</button>
         <label class="btn" style="cursor:pointer">Import JSON…<input type="file" accept="application/json,.json" data-change="import" hidden></label>
-        ${store.cloud ? '<button class="btn danger" data-act="signOut">Sign out</button>' : ''}
       </div>
       <div class="hint">${S.vocab.length} words · ${S.texts.length} texts · ${S.grammar.length} grammar · ${S.exercises.length} exercises · ${S.lessons.length} lessons</div>
     </section>
@@ -1308,7 +1370,8 @@ document.addEventListener('click', async e => {
     setPy: () => { settings.pyStyle = el.dataset.v; saveSettings(); render(); },
     setTheme: () => { settings.theme = el.dataset.v; saveSettings(); applyTheme(); render(); },
     export: () => { const blob = new Blob([JSON.stringify({ app: 'hanzi-notes', version: 1, exported: new Date().toISOString(), data: { ...S } }, null, 2)], { type: 'application/json' }); const a2 = document.createElement('a'); a2.href = URL.createObjectURL(blob); a2.download = `hanzi-notes-${dayKey()}.json`; a2.click(); URL.revokeObjectURL(a2.href); },
-    signOut: () => fb.au.signOut(fb.auth),
+    signIn: () => signIn(),
+    signOut: () => signOutNow(),
     gotoGrammar: () => { ui.grammar.q = el.dataset.q; },
   };
   if (acts[a]) { if (el.tagName === 'BUTTON' && el.type !== 'submit') e.preventDefault(); await acts[a](); }
@@ -1385,7 +1448,7 @@ document.addEventListener('change', async e => {
 
 document.addEventListener('keydown', e => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
-  if ($('#app').hidden) return;
+  if (CLOUD && sync.auth !== 'in') return;
   if (e.key === 'Escape' && ui.pop) { ui.pop = null; render(); return; }
   if (modal.open || typing || e.metaKey || e.ctrlKey || e.altKey) return;
   if (ui.route === 'review') {
@@ -1404,10 +1467,10 @@ if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { };
    ===================================================================== */
 parseRoute();
 if (CLOUD) {
-  initCloud().catch(err => { console.error(err); $('#auth').hidden = false; $('#authMsg').textContent = 'Could not reach Firebase: ' + err.message; });
+  render(); // shows "Connecting…" until Firebase reports the sign-in state
+  initCloud().catch(err => { console.error(err); sync.auth = 'out'; sync.authMsg = 'Could not reach Firebase: ' + err.message + '. Check your connection and reload.'; updateSync(); render(); });
 } else {
   loadLocal();
-  $('#app').hidden = false;
   render();
 }
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });

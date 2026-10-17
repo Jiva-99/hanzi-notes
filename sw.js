@@ -1,5 +1,5 @@
 // Hanzi Notes service worker: network-first for the app shell, cache as offline fallback.
-const CACHE = 'hanzi-notes-v2';
+const CACHE = 'hanzi-notes-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-32.png', './favicon.ico'];
 
 self.addEventListener('install', e => {
