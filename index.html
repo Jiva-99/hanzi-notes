@@ -24,8 +24,9 @@
   --t1:#C8312A; --t2:#B45F06; --t3:#1E7D45; --t4:#2453C7; --t0:#6E6E73;
   --new-bg:#E3ECFA; --new-fg:#1B4BA8; --lrn-bg:#FCEEDC; --lrn-fg:#8A4300; --kn-bg:#E2F3E8; --kn-fg:#17643A;
   --bad-bg:#FBE4E2; --bad-fg:#8F1A12; --warn-soft:#FBF4F2; --streak:#C2410C; --shadow:0 12px 40px rgba(0,0,0,.08);
-  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","Noto Sans SC",sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","Helvetica Neue",Arial,"Noto Sans SC",sans-serif;
   --zh:"PingFang SC","Noto Sans SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --py:"Segoe UI","SF Pro Text",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Roboto,Arial,sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark){
@@ -145,7 +146,7 @@ kbd{font-family:var(--sans);font-size:11px;padding:1px 5px;border-radius:4px;bor
 .split{flex:1;min-height:0;display:flex}
 .listcol{flex:1;min-width:0;display:flex;flex-direction:column}
 .filters{display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
-.thead,.vrow{display:grid;grid-template-columns:120px 150px minmax(0,1fr) 90px 80px 96px;gap:12px;align-items:center}
+.thead,.vrow{display:grid;grid-template-columns:96px 130px 104px minmax(0,1fr) 76px 84px;gap:12px;align-items:center}
 .thead{padding:8px 24px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line)}
 .vlist{padding:4px 12px 24px}
 .vrow{width:100%;min-height:52px;padding:0 12px;border:0;border-radius:8px;background:transparent;text-align:left;cursor:pointer;color:var(--text)}
@@ -160,6 +161,8 @@ kbd{font-family:var(--sans);font-size:11px;padding:1px 5px;border-radius:4px;bor
 .hero .h{font-size:64px;line-height:1.1;font-family:var(--zh)}
 .hero .py{font-size:22px;font-weight:500}
 .dl{margin:0;display:grid;grid-template-columns:100px minmax(0,1fr);row-gap:10px;font-size:13px}
+.dl .seg button{padding:0 9px}
+.dl dd{min-width:0}
 .dl dt{color:var(--muted)}.dl dd{margin:0}
 .ex{display:flex;flex-direction:column;gap:4px;padding:14px;background:var(--card);border:1px solid var(--line);border-radius:10px}
 .ex .zh{font-size:19px}
@@ -183,7 +186,13 @@ kbd{font-family:var(--sans);font-size:11px;padding:1px 5px;border-radius:4px;bor
 .ch{display:inline-flex;flex-direction:column;align-items:center;min-width:calc(var(--rs,28px) + 2px);padding:0 1px;border-radius:5px;border:0;background:transparent;cursor:pointer;color:var(--text)}
 .ch:hover{background:var(--seg)}
 .ch.hl{background:var(--accent-tint)}
-.ch .p{font-size:12px;height:16px;line-height:16px}
+.ch .p{font-size:12px;height:16px;line-height:16px;font-family:var(--py)}
+.pyf{font-family:var(--py)}
+.trans{display:flex;align-items:baseline;gap:6px}
+.trans-btn{border:0;background:transparent;color:var(--accent);font-size:13px;cursor:pointer;padding:2px 0}
+.trans-btn:hover{text-decoration:underline}
+.trans-edit{border:0;background:transparent;color:var(--muted);cursor:pointer;padding:0 4px;border-radius:4px;opacity:.6}
+.trans-edit:hover{opacity:1;background:var(--seg)}
 .ch .c{font-size:var(--rs,28px);line-height:1.45;font-family:var(--zh)}
 .ch.punct{cursor:default}.ch.punct:hover{background:transparent}
 .nopy .ch .p{visibility:hidden}
@@ -248,7 +257,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 @media (prefers-reduced-motion:reduce){.sync.busy .dot{animation:none}}
 
 /* ---- responsive ---- */
-@media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} .span3{grid-column:1/-1} .inspector{width:280px} .thead,.vrow{grid-template-columns:100px 130px minmax(0,1fr) 90px} .thead .opt,.vrow .opt{display:none} }
+@media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} .span3{grid-column:1/-1} .inspector{width:280px} .thead,.vrow{grid-template-columns:100px 130px 100px minmax(0,1fr)} .thead .opt,.vrow .opt{display:none} }
 @media (max-width:760px){
   .side{display:none}
   .app{flex-direction:column}
@@ -277,7 +286,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .exitem{grid-template-columns:1fr}
   .row2{grid-template-columns:1fr}
   .qa{grid-template-columns:1fr 1fr!important}
-  .qa .field:first-child{grid-column:1/-1}
+  .qa .field:nth-child(3){grid-column:1/-1}
   .rates{grid-template-columns:repeat(2,minmax(0,1fr))}
   .fc .big{font-size:64px}
   .hide-m{display:none!important}
@@ -418,7 +427,7 @@ function pyHTML(numbered, sep = '') {
   const syl = String(numbered || '').trim().split(/\s+/).filter(Boolean);
   return syl.map(s => {
     const txt = settings.pyStyle === 'num' ? s : sylToMark(s);
-    return `<span class="${settings.tones ? 't' + sylTone(s) : 'tx'}">${esc(txt)}</span>`;
+    return `<span class="pyf ${settings.tones ? 't' + sylTone(s) : 'tx'}">${esc(txt)}</span>`;
   }).join(sep);
 }
 const pyPlainText = numbered => String(numbered || '').trim().split(/\s+/).filter(Boolean).map(sylToMark).join(' ');
@@ -477,7 +486,14 @@ function status(item) {
   if (!s || !s.seen) return 'new';
   return s.interval >= 21 ? 'known' : 'learning';
 }
-const STATUS_LABEL = { new: 'New', learning: 'Learning', known: 'Known' };
+const STATUS_LABEL = { new: 'New', learning: 'Review', known: 'Known' };
+/** set a word's status by hand: new = not studied, learning = due for review now, known = pushed 3 weeks out */
+function srsForStatus(item, st, now = Date.now()) {
+  const cur = { ...NEW_SRS(), ...(item.srs || {}) };
+  if (st === 'new') return NEW_SRS();
+  if (st === 'known') return { ...cur, seen: true, reps: Math.max(1, cur.reps), interval: 21, due: now + 21 * DAY, last: now };
+  return { ...cur, seen: true, reps: Math.max(1, cur.reps), interval: Math.min(Math.max(cur.interval, 1), 20), due: now };
+}
 function nextReviewLabel(item) {
   const s = item.srs;
   if (!s || !s.seen) return 'Not studied yet';
@@ -666,7 +682,7 @@ function lessonCounts(id) {
    ===================================================================== */
 const ui = {
   route: 'today', param: null,
-  qa: { h: '', py: '', pyEdited: false, en: '', pos: 'Noun' },
+  qa: { h: '', py: '', pyEdited: false, en: '', pos: settings.lastPos || 'Noun' },
   vocab: { status: 'all', lesson: 'all', q: '', sel: null },
   grammar: { lesson: 'all', q: '' },
   ex: { filter: 'all' },
@@ -794,10 +810,10 @@ function vToday() {
           <button class="btn" data-act="newVocab">More fields…</button>
         </div>
       </div>
-      <form id="qaForm" style="display:grid;grid-template-columns:180px minmax(0,1fr) 130px;gap:12px;align-items:end" class="qa">
+      <form id="qaForm" style="display:grid;grid-template-columns:140px 180px minmax(0,1fr);gap:12px;align-items:end" class="qa">
+        <label class="field">Part of speech<select id="qaPos" class="select" style="height:44px">${POS.map(p => `<option ${qa.pos === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
         <label class="field">Characters<input id="qaH" class="input big" value="${esc(qa.h)}" autocomplete="off" lang="zh-CN" placeholder="超市" required></label>
         <label class="field">Meaning<input id="qaEn" class="input" style="height:44px" value="${esc(qa.en)}" autocomplete="off" placeholder="supermarket" required></label>
-        <label class="field">Type<select id="qaPos" class="select" style="height:44px">${['Noun', 'Verb', 'Adjective', 'Adverb', 'Measure word', 'Phrase', 'Other'].map(p => `<option ${qa.pos === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
         <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <label for="qaPy" class="muted" style="font-size:12px">Pinyin</label>
           <span id="qaPreview" style="font-size:18px;font-weight:500;min-width:40px">${qa.py ? pyHTML(qa.py) : '<span class="muted" style="font-size:13px">appears as you type</span>'}</span>
@@ -858,11 +874,11 @@ function vVocab() {
         <select class="select" style="width:auto;height:28px;font-size:13px" data-change="vLesson" aria-label="Lesson">${lessonOptions(f.lesson, true)}</select>
         <input id="vq" class="input" style="width:200px;height:28px;font-size:13px;margin-left:auto" placeholder="Filter: 汉字, pinyin, English" value="${esc(f.q)}" autocomplete="off" aria-label="Filter vocabulary">
       </div>
-      <div class="thead"><span>Hanzi</span><span>Pinyin</span><span>Meaning</span><span>Type</span><span class="opt">Lesson</span><span class="opt">Status</span></div>
+      <div class="thead"><span>Hanzi</span><span>Pinyin</span><span>Type</span><span>Meaning</span><span class="opt">Lesson</span><span class="opt">Status</span></div>
       <div class="scroll" data-keep-scroll="vocab"><div class="vlist">
         ${list.map(v => `<button class="vrow ${sel && sel.id === v.id ? 'on' : ''}" data-act="selVocab" data-id="${v.id}">
-          <span class="h">${esc(v.hanzi)}</span><span class="py">${pyHTML(v.py)}</span><span class="en">${esc(v.meaning)}</span>
-          <span class="m">${esc(v.pos || '')}</span><span class="m opt">${esc(v.lesson ? lessonName(v.lesson) : '')}</span><span class="st opt">${statusPill(v)}</span></button>`).join('')
+          <span class="h">${esc(v.hanzi)}</span><span class="py">${pyHTML(v.py)}</span><span class="m">${esc(v.pos || '')}</span>
+          <span class="en">${esc(v.meaning)}</span><span class="m opt">${esc(v.lesson ? lessonName(v.lesson) : '')}</span><span class="st opt">${statusPill(v)}</span></button>`).join('')
           || `<div class="empty"><span class="h">词</span>${S.vocab.length ? 'No words match these filters.' : 'No words yet. Add your first from today’s lesson.'}${S.vocab.length ? '' : `<button class="btn primary" data-act="newVocab">${ic('plus', 12)} Add a word</button>`}</div>`}
       </div></div>
     </div>
@@ -882,14 +898,13 @@ function vocabDetail(v) {
       <dt>Type</dt><dd>${esc(v.pos || '—')}</dd>
       <dt>Measure word</dt><dd class="zh">${esc(v.mw || '—')}</dd>
       <dt>Lesson</dt><dd>${v.lesson ? `<a href="#/lesson/${v.lesson}">${esc(lessonName(v.lesson))}</a>` : '—'}</dd>
-      <dt>Status</dt><dd>${statusPill(v)}</dd>
+      <dt>Status</dt><dd><div class="seg" role="group" aria-label="Status">${['new', 'learning', 'known'].map(k => `<button class="${status(v) === k ? 'on' : ''}" data-act="setStatus" data-id="${v.id}" data-v="${k}" aria-pressed="${status(v) === k}">${STATUS_LABEL[k]}</button>`).join('')}</div></dd>
       <dt>Next review</dt><dd>${nextReviewLabel(v)}</dd>
     </dl>
     ${v.example ? `<div class="ex"><span class="label" style="font-size:11px">Example</span><span style="font-size:13px;color:var(--text-2)">${esc(pyPlainText(exPy))}</span><span class="zh">${esc(v.example)}</span>${v.exampleEn ? `<span class="muted" style="font-size:13px">${esc(v.exampleEn)}</span>` : ''}<button class="btn ghost" style="align-self:flex-start;padding:0 6px" data-act="speak" data-text="${esc(v.example)}">${ic('play', 14)} Play</button></div>` : ''}
     ${v.notes ? `<div style="font-size:13px;color:var(--text-2);white-space:pre-wrap">${esc(v.notes)}</div>` : ''}
     <div style="margin-top:auto;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" style="flex:1" data-act="editVocab" data-id="${v.id}">${ic('edit', 13)} Edit</button>
-      ${status(v) !== 'known' ? `<button class="btn" style="flex:1" data-act="markKnown" data-id="${v.id}">Mark as known</button>` : `<button class="btn" style="flex:1" data-act="resetSrs" data-id="${v.id}">Study again</button>`}
       <button class="btn icon danger" data-act="delVocab" data-id="${v.id}" aria-label="Delete word">${ic('trash', 14)}</button>
     </div>`;
 }
@@ -898,7 +913,7 @@ function vocabDetail(v) {
 function parseTextLines(body) {
   return String(body || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
     let sp = '', zh = l, en = '';
-    const bar = zh.split(/\s*\|\s*/); zh = bar[0]; en = bar.slice(1).join(' | ');
+    const bar = zh.split(/\s*[|｜¦]\s*/); zh = bar[0]; en = bar.slice(1).join(' | ');
     const m = /^([A-Za-z]{1,2}|[\p{Script=Han}]{1,4})\s*[:：]\s*(.+)$/u.exec(zh);
     if (m) { sp = m[1]; zh = m[2]; }
     return { sp, zh, en };
@@ -941,7 +956,9 @@ function vTexts() {
     const spIdx = speakers.indexOf(l.sp);
     return `<div class="line" data-line="${li}" style="position:relative">
       <span class="spk ${l.sp ? (spIdx % 2 ? 'b' : '') : 'none'}">${esc(l.sp || '·')}</span>
-      <div style="flex:1;min-width:0"><div class="chars">${chars}</div>${settings.readerTrans && l.en ? `<div class="trans">${esc(l.en)}</div>` : ''}</div>
+      <div style="flex:1;min-width:0"><div class="chars">${chars}</div>${!settings.readerTrans ? '' : l.en
+        ? `<div class="trans"><span>${esc(l.en)}</span><button class="trans-edit" data-act="editTrans" data-id="${t.id}" data-line="${li}" aria-label="Edit translation">${ic('edit', 12)}</button></div>`
+        : `<div class="trans"><button class="trans-btn" data-act="editTrans" data-id="${t.id}" data-line="${li}">+ Add translation</button></div>`}</div>
       <div class="lineacts">
         <button class="btn ghost icon" data-act="speak" data-text="${esc(l.zh)}" aria-label="Play sentence">${ic('play', 15)}</button>
         <button class="btn ghost icon star ${saved.has(li) ? 'on' : ''}" data-act="toggleSaved" data-id="${t.id}" data-line="${li}" aria-pressed="${saved.has(li)}" aria-label="Save sentence to memorise">${ic(saved.has(li) ? 'starOn' : 'star', 15)}</button>
@@ -955,8 +972,9 @@ function vTexts() {
   <div class="split">${list}
     <div class="reader">
       <div class="rbody ${settings.readerPy ? '' : 'nopy'}" style="--rs:${settings.readerSize}px" data-keep-scroll="reader">
-        <div class="rtitle"><h2>${esc(t.title || 'Untitled')}</h2><span style="font-size:16px;color:var(--text-2)">${esc(pyPlainText(autoPinyin(t.title)))}</span><span class="muted">${esc(t.titleEn || '')}</span>
+        <div class="rtitle"><h2>${esc(t.title || 'Untitled')}</h2><span class="pyf" style="font-size:16px;color:var(--text-2)">${esc(pyPlainText(autoPinyin(t.title)))}</span><span class="muted">${esc(t.titleEn || '')}</span>
           <span style="margin-left:auto;display:flex;gap:6px"><button class="btn" data-act="editText" data-id="${t.id}">${ic('edit', 13)} Edit</button><button class="btn icon danger" data-act="delText" data-id="${t.id}" aria-label="Delete text">${ic('trash', 14)}</button></span></div>
+        ${settings.readerTrans && lines.length && !lines.some(l => l.en) ? `<div class="warnbox" style="margin-bottom:12px">${ic('alert', 15, 'style="flex-shrink:0;margin-top:1px"')}<div>No translations yet. Tap <b>+ Add translation</b> under a line, or click Edit and put <b>|</b> then the English at the end of each line.</div></div>` : ''}
         ${linesHTML || '<p class="muted">This text is empty. Click Edit to add lines.</p>'}
         <p class="hint" style="margin-top:18px">Tap a character to look it up or add it. ${saved.size ? `${plural(saved.size, 'sentence')} saved to memorise.` : 'Star sentences you want to memorise for speaking.'}</p>
       </div>
@@ -983,7 +1001,7 @@ function popHTML(p) {
 function formulaHTML(pattern) {
   return `<div class="formula">${String(pattern || '').split('+').map(p => p.trim()).filter(Boolean).map(p => `<span class="${/\p{Script=Han}/u.test(p) && !/[A-Za-z]/.test(p) ? 'kw' : ''}">${esc(p)}</span>`).join('<b>+</b>')}</div>`;
 }
-function parseExamples(text) { return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const [zh, ...en] = l.split(/\s*\|\s*/); return { zh, en: en.join(' | ') }; }); }
+function parseExamples(text) { return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const [zh, ...en] = l.split(/\s*[|｜¦]\s*/); return { zh, en: en.join(' | ') }; }); }
 function vGrammar() {
   const g = ui.grammar; const q = g.q.trim().toLowerCase();
   const list = S.grammar.filter(x => (g.lesson === 'all' || x.lesson === g.lesson) && (!q || [x.title, x.pattern, x.explain, x.examples].join(' ').toLowerCase().includes(q))).sort((a, b) => (b.created || 0) - (a.created || 0));
@@ -1188,22 +1206,23 @@ const POS = ['Noun', 'Verb', 'Adjective', 'Adverb', 'Measure word', 'Phrase', 'O
 function vocabForm(v = {}, preset = {}) {
   formCtx = { kind: 'vocab', id: v.id, pyEdited: !!v.id };
   const lesson = v.lesson ?? preset.lesson ?? lastLesson()?.id ?? '';
+  const pos = v.pos || preset.pos || settings.lastPos || 'Noun';
+  const st = v.id ? status(v) : 'new';
   openDialog(v.id ? 'Edit word' : 'New word', `
+    <div class="row2">
+      <label class="field">Part of speech<select name="pos" class="select" style="height:44px">${POS.map(p => `<option ${pos === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+      <label class="field">Status<select name="status" class="select" style="height:44px">${['new', 'learning', 'known'].map(k => `<option value="${k}" ${st === k ? 'selected' : ''}>${STATUS_LABEL[k]}</option>`).join('')}</select></label>
+    </div>
     <div class="row2">
       <label class="field">Characters<input name="hanzi" id="fH" class="input big" value="${esc(v.hanzi || preset.hanzi || '')}" required autocomplete="off" lang="zh-CN"></label>
       <label class="field">Meaning<input name="meaning" class="input" style="height:44px" value="${esc(v.meaning || '')}" required autocomplete="off"></label>
     </div>
     <div class="field">Pinyin <span style="display:flex;gap:10px;align-items:center"><input name="py" id="fPy" class="input" value="${esc(v.py || preset.py || '')}" placeholder="chao1 shi4  or  chāo shì" autocomplete="off" style="flex:1"><span id="fPyPrev" style="font-size:18px;font-weight:500;min-width:80px">${pyHTML(v.py || preset.py || '')}</span></span><span class="hint">Filled in automatically. Separate syllables with spaces to edit.</span></div>
     <div class="row2">
-      <label class="field">Type<select name="pos" class="select">${POS.map(p => `<option ${(v.pos || 'Noun') === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
       <label class="field">Measure word<input name="mw" class="input" value="${esc(v.mw || '')}" placeholder="个 gè" autocomplete="off"></label>
-    </div>
-    <label class="field">Example sentence<input name="example" class="input zh" value="${esc(v.example || preset.example || '')}" placeholder="我去超市买水果。" autocomplete="off"></label>
-    <label class="field">Example translation<input name="exampleEn" class="input" value="${esc(v.exampleEn || '')}" autocomplete="off"></label>
-    <div class="row2">
       <label class="field">Lesson<select name="lesson" class="select">${lessonOptions(lesson, false)}</select></label>
-      <label class="field">Notes<input name="notes" class="input" value="${esc(v.notes || '')}" autocomplete="off"></label>
-    </div>`, v.id ? 'Save' : 'Add word', v.id ? '' : '<label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" name="another" checked> Add another</label>');
+    </div>
+    <label class="field">Notes<input name="notes" class="input" value="${esc(v.notes || '')}" autocomplete="off"></label>`, v.id ? 'Save' : 'Add word', v.id ? '' : '<label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" name="another" checked> Add another</label>');
   if (!v.id && (preset.hanzi) && !preset.py) { const py = autoPinyin(preset.hanzi); $('#fPy').value = py; $('#fPyPrev').innerHTML = pyHTML(py); }
 }
 function grammarForm(g = {}, preset = {}) {
@@ -1267,11 +1286,14 @@ async function submitDialog(fd) {
   if (k === 'vocab') {
     const prev = formCtx.id ? byId('vocab', formCtx.id) : {};
     const hanzi = get('hanzi');
-    const obj = { ...prev, hanzi, meaning: get('meaning'), py: normPinyin(get('py')) || autoPinyin(hanzi), pos: get('pos'), mw: get('mw'), example: get('example'), exampleEn: get('exampleEn'), lesson: get('lesson'), notes: get('notes') };
+    const obj = { ...prev, hanzi, meaning: get('meaning'), py: normPinyin(get('py')) || autoPinyin(hanzi), pos: get('pos'), mw: get('mw'), lesson: get('lesson'), notes: get('notes') };
+    const want = get('status') || 'new';
+    if ((prev.id ? status(prev) : 'new') !== want) obj.srs = srsForStatus(prev, want);
+    settings.lastPos = obj.pos; saveSettings();
     if (!prev.id && S.vocab.some(v => v.hanzi === hanzi) && !confirm(`${hanzi} is already in your vocabulary. Add it again?`)) return;
     const saved = await store.put('vocab', obj);
     ui.vocab.sel = saved.id;
-    if (!prev.id && fd.get('another')) { toast(`Added ${hanzi}`); vocabForm({}, { lesson: obj.lesson }); return; }
+    if (!prev.id && fd.get('another')) { toast(`Added ${hanzi}`); vocabForm({}, { lesson: obj.lesson, pos: obj.pos }); return; }
     toast(prev.id ? 'Saved' : `Added ${hanzi}`);
   } else if (k === 'grammar') {
     await store.put('grammar', { ...(formCtx.id ? byId('grammar', formCtx.id) : {}), title: get('title'), pattern: get('pattern'), explain: get('explain'), examples: get('examples'), mistake: get('mistake'), lesson: get('lesson') });
@@ -1345,8 +1367,7 @@ document.addEventListener('click', async e => {
     selVocab: () => { ui.vocab.sel = id; if (matchMedia('(max-width:760px)').matches) showVocabSheet(id); else render(); },
     openVocab: () => { e.preventDefault(); ui.vocab = { ...ui.vocab, status: 'all', lesson: 'all', q: '', sel: id }; ui.pop = null; if (matchMedia('(max-width:760px)').matches) showVocabSheet(id); else location.hash = '#/vocab'; render(); },
     vStatus: () => { ui.vocab.status = el.dataset.v; render(); },
-    markKnown: () => { const v = byId('vocab', id); const now = Date.now(); store.put('vocab', { ...v, srs: { ...NEW_SRS(), ...(v.srs || {}), seen: true, reps: Math.max(1, v.srs?.reps || 0), interval: 21, due: now + 21 * DAY, last: now } }); },
-    resetSrs: () => { const v = byId('vocab', id); store.put('vocab', { ...v, srs: NEW_SRS() }); },
+    setStatus: () => { const v = byId('vocab', id); if (v && status(v) !== el.dataset.v) { store.put('vocab', { ...v, srs: srsForStatus(v, el.dataset.v) }); toast(`${v.hanzi} → ${STATUS_LABEL[el.dataset.v]}`); } },
     delVocab: () => { closeDialog(); removeWithUndo('vocab', id, byId('vocab', id)?.hanzi || 'word'); },
     delGrammar: () => removeWithUndo('grammar', id, 'grammar point'),
     delText: () => { removeWithUndo('texts', id, 'text'); location.hash = '#/texts'; },
@@ -1361,6 +1382,22 @@ document.addEventListener('click', async e => {
     closePop: () => { ui.pop = null; render(); },
     growPop: () => { const p = ui.pop; const t = byId('texts', p.textId); const line = parseTextLines(t.body)[p.line]; const chars = [...line.zh]; const rd = lineReadings(line.zh); p.b += 1; p.word = chars.slice(p.a, p.b).join(''); p.py = rd.slice(p.a, p.b).map(r => r.p).join(' '); p.canGrow = p.b < chars.length && isHan(chars[p.b]); p.v = S.vocab.find(v => v.hanzi === p.word) || null; render(); },
     addFromText: () => { const p = ui.pop; const t = byId('texts', p.textId); vocabForm({}, { hanzi: el.dataset.word, py: p.py, example: el.dataset.ctx, lesson: t?.lesson }); },
+    editTrans: () => {
+      const t = byId('texts', id); if (!t) return;
+      const li = Number(el.dataset.line);
+      const line = parseTextLines(t.body)[li]; if (!line) return;
+      const en = prompt(`Translation for:\n${line.zh}`, line.en || '');
+      if (en === null) return;
+      let n = -1;
+      const body = String(t.body || '').split('\n').map(raw => {
+        if (!raw.trim()) return raw;
+        n += 1;
+        if (n !== li) return raw;
+        const zhPart = raw.split(/\s*[|｜¦]\s*/)[0].trim();
+        return en.trim() ? `${zhPart} | ${en.trim()}` : zhPart;
+      }).join('\n');
+      store.put('texts', { ...t, body });
+    },
     toggleSaved: () => { const t = byId('texts', id); const s = new Set(t.saved || []); const li = Number(el.dataset.line); s.has(li) ? s.delete(li) : s.add(li); store.put('texts', { ...t, saved: [...s] }); },
     startReview: () => startReview(),
     endReview: () => { ui.rv = null; render(); },
@@ -1426,7 +1463,7 @@ document.addEventListener('compositionend', e => setTimeout(() => e.target.dispa
 
 document.addEventListener('change', async e => {
   const t = e.target, c = t.dataset.change;
-  if (t.id === 'qaPos') ui.qa.pos = t.value;
+  if (t.id === 'qaPos') { ui.qa.pos = t.value; settings.lastPos = t.value; saveSettings(); }
   if (!c) return;
   if (c === 'vLesson') { ui.vocab.lesson = t.value; render(); }
   if (c === 'gLesson') { ui.grammar.lesson = t.value; render(); }
