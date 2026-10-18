@@ -810,8 +810,8 @@ function vToday() {
           <button class="btn" data-act="newVocab">More fields…</button>
         </div>
       </div>
-      <form id="qaForm" style="display:grid;grid-template-columns:140px 180px minmax(0,1fr);gap:12px;align-items:end" class="qa">
-        <label class="field">Part of speech<select id="qaPos" class="select" style="height:44px">${POS.map(p => `<option ${qa.pos === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+      <form id="qaForm" style="display:grid;grid-template-columns:170px 170px minmax(0,1fr);gap:12px;align-items:end" class="qa">
+        <label class="field">Part of speech<select id="qaPos" class="select" style="height:44px">${posOptions(qa.pos)}</select></label>
         <label class="field">Characters<input id="qaH" class="input big" value="${esc(qa.h)}" autocomplete="off" lang="zh-CN" placeholder="超市" required></label>
         <label class="field">Meaning<input id="qaEn" class="input" style="height:44px" value="${esc(qa.en)}" autocomplete="off" placeholder="supermarket" required></label>
         <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -1201,7 +1201,15 @@ function openDialog(title, body, saveLabel = 'Save', extraFooter = '') {
   const first = modal.querySelector('input,textarea,select'); if (first) first.focus();
 }
 const closeDialog = () => { modal.close(); formCtx = null; };
-const POS = ['Noun', 'Verb', 'Adjective', 'Adverb', 'Measure word', 'Phrase', 'Other'];
+// Parts of speech (English value is what's stored; Chinese term shown alongside)
+const POS_ZH = {
+  'Noun': '名词', 'Pronoun': '代词', 'Verb': '动词', 'Auxiliary verb': '能愿动词', 'Adjective': '形容词', 'Adverb': '副词',
+  'Number': '数词', 'Measure word': '量词', 'Preposition': '介词', 'Conjunction': '连词', 'Particle': '助词',
+  'Interjection': '叹词', 'Onomatopoeia': '拟声词', 'Phrase': '短语', 'Idiom': '成语', 'Other': '其他'
+};
+const POS = Object.keys(POS_ZH);
+const posOptions = sel => POS.map(p => `<option value="${p}" ${sel === p ? 'selected' : ''}>${p} · ${POS_ZH[p]}</option>`).join('')
+  + (sel && !POS.includes(sel) ? `<option value="${esc(sel)}" selected>${esc(sel)}</option>` : '');
 
 function vocabForm(v = {}, preset = {}) {
   formCtx = { kind: 'vocab', id: v.id, pyEdited: !!v.id };
@@ -1210,7 +1218,7 @@ function vocabForm(v = {}, preset = {}) {
   const st = v.id ? status(v) : 'new';
   openDialog(v.id ? 'Edit word' : 'New word', `
     <div class="row2">
-      <label class="field">Part of speech<select name="pos" class="select" style="height:44px">${POS.map(p => `<option ${pos === p ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+      <label class="field">Part of speech<select name="pos" class="select" style="height:44px">${posOptions(pos)}</select></label>
       <label class="field">Status<select name="status" class="select" style="height:44px">${['new', 'learning', 'known'].map(k => `<option value="${k}" ${st === k ? 'selected' : ''}>${STATUS_LABEL[k]}</option>`).join('')}</select></label>
     </div>
     <div class="row2">
